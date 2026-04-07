@@ -125,10 +125,28 @@ textarea{ resize:none; min-height:82px; }
   height:100%; background:var(--primary); border-radius:99px; transition:width .4s ease;
 }
 .category-section{ margin-bottom:14px; }
+.category-header{
+  display:flex; align-items:center; gap:6px; margin-bottom:6px; padding:4px 4px 4px 0;
+  border-radius:8px; transition:background .15s;
+}
+.category-header:hover{ background:var(--primary-light); }
+.cat-drag{ cursor:grab; opacity:.4; font-size:14px; flex-shrink:0; user-select:none; padding:0 2px; }
 .category-label{
   font-size:11px; font-weight:800; text-transform:uppercase;
-  letter-spacing:.1em; color:var(--muted); margin-bottom:6px; padding-left:4px;
+  letter-spacing:.1em; color:var(--muted); flex:1;
 }
+.use-cat-btn{
+  width:24px; height:24px; border-radius:6px; background:var(--primary-light);
+  font-size:16px; font-weight:800; color:var(--primary); flex-shrink:0;
+}
+.use-cat-btn:hover{ background:var(--primary); color:white; }
+.collapse-btn{
+  width:28px; height:28px; border-radius:7px; background:transparent;
+  border:none; cursor:pointer; font-size:11px; color:var(--muted);
+  display:flex; align-items:center; justify-content:center;
+  transition:transform .2s, background .15s;
+}
+.collapse-btn:hover{ background:var(--btn); }
 .item{
   display:flex; align-items:center; gap:10px; background:var(--card);
   padding:10px 12px; border-radius:10px; margin-bottom:7px; box-shadow:var(--shadow);
@@ -199,7 +217,8 @@ textarea{ resize:none; min-height:82px; }
     </div>
     <div id="items"></div>
     <div class="section-title">Adicionar itens</div>
-    <input id="newCategory" placeholder="Categoria (opcional) — ex: Frutas, Laticínios" style="margin-bottom:8px">
+    <input id="newCategory" list="categoryOptions" placeholder="Categoria (opcional) — ex: Frutas, Laticínios" style="margin-bottom:8px">
+    <datalist id="categoryOptions"></datalist>
     <textarea id="newItems" placeholder="Itens — um por linha&#10;Arroz&#10;Feijão&#10;Macarrão"></textarea>
     <button class="primary-btn" onclick="addItems()">+ Adicionar</button>
   </div>
@@ -236,7 +255,7 @@ function createList(){
   const name = document.getElementById("listName").value.trim()
   const emoji = document.getElementById("listEmoji").value.trim() || "🛒"
   if(!name) return
-  lists.push({ name, emoji, items:[] })
+  lists.push({ name, emoji, items:[], categoryOrder:[], collapsedCats:[] })
   document.getElementById("listName").value = ""
   document.getElementById("listEmoji").value = ""
   save(); renderLists()
@@ -306,9 +325,13 @@ function addItems(){
   const txt = document.getElementById("newItems").value.trim()
   const category = document.getElementById("newCategory").value.trim()
   if(!txt) return
+  const list = lists[currentList]
+  if(!list.categoryOrder) list.categoryOrder = []
+  if(!list.collapsedCats) list.collapsedCats = []
   txt.split("\n").forEach(t => {
-    if(t.trim()) lists[currentList].items.push({ name:t.trim(), status:0, category:category||"" })
+    if(t.trim()) list.items.push({ name:t.trim(), status:0, category:category||"" })
   })
+  if(!list.categoryOrder.includes(category||"")) list.categoryOrder.push(category||"")
   document.getElementById("newItems").value = ""
   save(); renderItems()
   showToast("Itens adicionados ✅")
@@ -343,12 +366,35 @@ function clearDone(){
   showToast(`${doneCount} item(s) removido(s) 🗑️`)
 }
 
+// ── USAR CATEGORIA ───────────────────────────────
+
+function useCategory(cat){
+  const input = document.getElementById("newCategory")
+  input.value = cat
+  input.scrollIntoView({ behavior:"smooth", block:"center" })
+  document.getElementById("newItems").focus()
+}
+
+// ── COLAPSAR CATEGORIA ───────────────────────────
+
+function toggleCollapse(cat){
+  const list = lists[currentList]
+  if(!list.collapsedCats) list.collapsedCats = []
+  const idx = list.collapsedCats.indexOf(cat)
+  if(idx === -1) list.collapsedCats.push(cat)
+  else list.collapsedCats.splice(idx, 1)
+  save(); renderItems()
+}
+
 // ── RENDERIZAR COM CATEGORIAS ────────────────────
 
 function renderItems(){
   const container = document.getElementById("items")
   container.innerHTML = ""
   const list = lists[currentList]
+  if(!list.categoryOrder) list.categoryOrder = []
+  if(!list.collapsedCats) list.collapsedCats = []
+
   const total = list.items.length
   const done = list.items.filter(it => it.status === 1).length
   const pct = total ? Math.round((done/total)*100) : 0
@@ -359,7 +405,15 @@ function renderItems(){
     return
   }
 
-  // Agrupamento por categoria
+  // Atualizar autocomplete
+  const dl = document.getElementById("categoryOptions")
+  if(dl){
+    dl.innerHTML = ""
+    const cats = [...new Set(list.items.map(it => it.category).filter(Boolean))]
+    cats.forEach(c => { const o = document.createElement("option"); o.value = c; dl.appendChild(o) })
+  }
+
+  // Agrupar itens por categoria
   const groups = {}
   list.items.forEach((item, i) => {
     const cat = item.category || ""
@@ -367,21 +421,41 @@ function renderItems(){
     groups[cat].push({ item, i })
   })
 
-  const cats = Object.keys(groups).sort((a,b) => {
-    if(a==="") return -1; if(b==="") return 1; return a.localeCompare(b)
-  })
+  // Ordenar categorias: usar categoryOrder, depois adicionar novas
+  const existingCats = Object.keys(groups)
+  const orderedCats = list.categoryOrder.filter(c => existingCats.includes(c))
+  existingCats.forEach(c => { if(!orderedCats.includes(c)) orderedCats.push(c) })
+  list.categoryOrder = orderedCats
 
-  cats.forEach(cat => {
+  // Container principal das categorias (sortable)
+  const catContainer = document.createElement("div")
+  catContainer.id = "catContainer"
+  container.appendChild(catContainer)
+
+  orderedCats.forEach(cat => {
+    const isCollapsed = list.collapsedCats.includes(cat)
     const section = document.createElement("div")
     section.className = "category-section"
+    section.dataset.cat = cat
+
     if(cat){
-      const label = document.createElement("div")
-      label.className = "category-label"
-      label.textContent = "📂 " + cat
-      section.appendChild(label)
+      const header = document.createElement("div")
+      header.className = "category-header"
+      const catEsc = cat.replace(/\\/g,'\\\\').replace(/'/g,"\\'")
+      header.innerHTML = `
+        <div class="cat-drag">⠿</div>
+        <div class="category-label">📂 ${cat}</div>
+        <button class="icon-btn use-cat-btn" title="Usar esta categoria" onclick="useCategory('${catEsc}')">+</button>
+        <button class="collapse-btn" onclick="toggleCollapse('${catEsc}')">
+          ${isCollapsed ? '▶' : '▼'}
+        </button>
+      `
+      section.appendChild(header)
     }
+
     const wrap = document.createElement("div")
     wrap.dataset.cat = cat
+    if(isCollapsed) wrap.classList.add("hidden")
 
     groups[cat].forEach(({ item, i }) => {
       const row = document.createElement("div")
@@ -399,7 +473,7 @@ function renderItems(){
     })
 
     section.appendChild(wrap)
-    container.appendChild(section)
+    catContainer.appendChild(section)
 
     new Sortable(wrap, {
       handle:".drag", animation:150,
@@ -412,6 +486,19 @@ function renderItems(){
         save(); renderItems()
       }
     })
+  })
+
+  // Drag para reordenar categorias (apenas as nomeadas têm handle)
+  new Sortable(catContainer, {
+    handle:".cat-drag", animation:150,
+    onEnd:() => {
+      const newOrder = []
+      catContainer.querySelectorAll(".category-section").forEach(sec => {
+        newOrder.push(sec.dataset.cat)
+      })
+      lists[currentList].categoryOrder = newOrder
+      save(); renderItems()
+    }
   })
 }
 
@@ -427,13 +514,15 @@ function copyList(){
     if(!groups[cat]) groups[cat] = []
     groups[cat].push(item)
   })
+  const orderedCats = (list.categoryOrder || []).filter(c => groups[c])
+  Object.keys(groups).forEach(c => { if(!orderedCats.includes(c)) orderedCats.push(c) })
+
   const lines = [list.emoji + " " + list.name, ""]
-  Object.keys(groups).sort((a,b)=>{ if(a==="")return -1; if(b==="")return 1; return a.localeCompare(b) })
-    .forEach(cat => {
-      if(cat) lines.push("▸ " + cat)
-      groups[cat].forEach(item => lines.push(statusLabel[item.status] + " " + item.name))
-      if(cat) lines.push("")
-    })
+  orderedCats.forEach(cat => {
+    if(cat) lines.push("▸ " + cat)
+    groups[cat].forEach(item => lines.push(statusLabel[item.status] + " " + item.name))
+    if(cat) lines.push("")
+  })
   const text = lines.join("\n")
   if(navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(text).then(()=>showToast("Lista copiada! 📋")).catch(()=>fallbackCopy(text))
