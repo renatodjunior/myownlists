@@ -177,6 +177,13 @@ textarea{ resize:none; min-height:82px; }
 }
 .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 .empty-state{ text-align:center; color:var(--muted); padding:28px 0 10px; font-size:15px; }
+.backup-row{ display:flex; gap:8px; margin-top:12px; }
+.backup-btn{
+  flex:1; padding:10px; border:none; border-radius:10px; background:var(--btn);
+  color:var(--text); font-family:inherit; font-size:13px; font-weight:700;
+  cursor:pointer; transition:transform .1s;
+}
+.backup-btn:active{ transform:scale(.97); }
 </style>
 </head>
 <body>
@@ -198,6 +205,11 @@ textarea{ resize:none; min-height:82px; }
       <input id="listEmoji" placeholder="🛒" maxlength="4">
     </div>
     <button class="primary-btn" onclick="createList()">+ Criar lista</button>
+    <div class="backup-row">
+      <button class="backup-btn" onclick="exportData()">⬆️ Exportar backup</button>
+      <button class="backup-btn" onclick="document.getElementById('importFile').click()">⬇️ Importar backup</button>
+      <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
+    </div>
   </div>
 
   <!-- TELA DE ITENS -->
@@ -539,6 +551,47 @@ function fallbackCopy(text){
 }
 
 document.getElementById("copyBtn").addEventListener("click", copyList)
+
+// ── BACKUP ───────────────────────────────────────
+
+function exportData(){
+  const data = JSON.stringify(lists, null, 2)
+  const blob = new Blob([data], { type:"application/json" })
+  const url = URL.createObjectURL(blob)
+  if(navigator.share){
+    navigator.share({ files:[new File([blob], "compras-backup.json", { type:"application/json" })], title:"Backup Compras" })
+      .catch(() => downloadFile(url))
+  } else {
+    downloadFile(url)
+  }
+}
+
+function downloadFile(url){
+  const a = document.createElement("a")
+  a.href = url; a.download = "compras-backup.json"
+  a.click(); URL.revokeObjectURL(url)
+  showToast("Backup exportado ✅")
+}
+
+function importData(e){
+  const file = e.target.files[0]
+  if(!file) return
+  const reader = new FileReader()
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result)
+      if(!Array.isArray(data)) throw new Error()
+      if(!confirm(`Importar ${data.length} lista(s)? As listas atuais serão substituídas.`)) return
+      lists = data
+      save(); renderLists()
+      showToast("Backup importado ✅")
+    } catch {
+      showToast("Arquivo inválido ❌")
+    }
+  }
+  reader.readAsText(file)
+  e.target.value = ""
+}
 
 // ── INIT ─────────────────────────────────────────
 renderLists()
