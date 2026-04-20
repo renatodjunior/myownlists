@@ -27,7 +27,7 @@
 
 > Lista de compras com emoji, contador de itens e botões de backup.
 
-![Tela inicial](https://myownlists.app/icon-192.png)
+![Tela inicial](print.png)
 
 ### Dentro de uma lista — itens por categoria
 
