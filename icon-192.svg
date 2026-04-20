@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <!-- Fundo verde arredondado -->
+  <rect width="192" height="192" rx="40" fill="#4CAF50"/>
+  <!-- Página do checklist -->
+  <rect x="44" y="30" width="104" height="132" rx="12" fill="white" opacity="0.95"/>
+  <!-- Linha 1 - checked -->
+  <rect x="62" y="60" width="68" height="8" rx="4" fill="#e0e0e0"/>
+  <circle cx="55" cy="64" r="9" fill="#4CAF50"/>
+  <polyline points="50,64 54,69 62,59" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Linha 2 - checked -->
+  <rect x="62" y="88" width="54" height="8" rx="4" fill="#e0e0e0"/>
+  <circle cx="55" cy="92" r="9" fill="#4CAF50"/>
+  <polyline points="50,92 54,97 62,87" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <!-- Linha 3 - unchecked -->
+  <rect x="62" y="116" width="62" height="8" rx="4" fill="#e0e0e0"/>
+  <circle cx="55" cy="120" r="9" fill="none" stroke="#bdbdbd" stroke-width="2.5"/>
+  <!-- Linha 4 - unchecked -->
+  <rect x="62" y="144" width="44" height="8" rx="4" fill="#e0e0e0"/>
+  <circle cx="55" cy="148" r="9" fill="none" stroke="#bdbdbd" stroke-width="2.5"/>
+</svg>

@@ -1,9 +1,10 @@
-const CACHE_NAME = "compras-v1"
+const CACHE_NAME = "compras-v2"
 
 // Arquivos para cachear (funcionar offline)
 const FILES = [
-  "./lista-de-compras.html",
+  "./index.html",
   "./manifest.json",
+  "./icon-192.svg",
   "./icon-192.png",
   "https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js",
   "https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap"
@@ -45,7 +46,7 @@ self.addEventListener("fetch", event => {
       }).catch(() => {
         // Offline e não tem cache: retorna o HTML principal
         if(event.request.destination === "document"){
-          return caches.match("./lista-de-compras.html")
+          return caches.match("./index.html")
         }
       })
     })
