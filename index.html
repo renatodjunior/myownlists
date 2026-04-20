@@ -65,6 +65,15 @@ body{
 }
 .theme-btn:active{ transform:scale(.9); }
 .help-btn{ font-weight:800; font-size:20px; line-height:1; }
+#titleIcon{
+  display:inline-block;
+  animation:iconPop .25s ease;
+}
+@keyframes iconPop{
+  0%{ opacity:0; transform:scale(.5) rotate(-15deg); }
+  60%{ transform:scale(1.2) rotate(5deg); }
+  100%{ opacity:1; transform:scale(1) rotate(0deg); }
+}
 .list-card{
   display:flex; justify-content:space-between; align-items:center;
   background:var(--card); padding:14px; border-radius:var(--radius);
@@ -273,7 +282,7 @@ textarea{ resize:none; min-height:82px; }
   <!-- LISTS PAGE -->
   <div id="listsPage">
     <div class="header">
-      <h2>🛒 MyOwnLists</h2>
+      <h2><span id="titleIcon">🛒</span> MyOwnLists</h2>
       <div class="header-right">
         <button class="theme-btn help-btn" onclick="openHelp()" id="helpBtn">?</button>
         <select class="lang-select" id="langSelect" onchange="setLang(this.value)">
@@ -1069,6 +1078,25 @@ function importData(e){
   reader.readAsText(file)
   e.target.value = ""
 }
+
+// ── TITLE ICON ANIMATION ──────────────────────────
+;(function(){
+  const icons     = ['🛒','🌭','🛍️','📓','🐱','📱','🐶','⛩️','🌍']
+  const durations = [5000, 500, 500, 500, 500, 500, 500, 500, 500]
+  const el = document.getElementById('titleIcon')
+  let idx = 0
+
+  function advance(){
+    idx = (idx + 1) % icons.length
+    el.textContent = icons[idx]
+    el.style.animation = 'none'
+    el.offsetWidth // reflow para reiniciar animação
+    el.style.animation = ''
+    setTimeout(advance, durations[idx])
+  }
+
+  setTimeout(advance, durations[0])
+})()
 
 // ── INIT ──────────────────────────────────────────
 applyLang()
