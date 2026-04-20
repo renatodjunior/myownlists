@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Lista de Compras</title>
+<title>MyOwnLists</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4CAF50">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Compras">
+<meta name="apple-mobile-web-app-title" content="MyOwnLists">
 <link rel="icon" type="image/svg+xml" href="icon-192.svg">
 <link rel="apple-touch-icon" href="icon-192.svg">
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
@@ -50,6 +50,14 @@ body{
 .container{ max-width:520px; margin:auto; padding:20px 16px 60px; }
 .header{ display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
 .header h2{ margin:0; font-size:26px; font-weight:800; color:var(--primary); }
+.header-right{ display:flex; gap:6px; align-items:center; }
+.lang-select{
+  padding:6px 8px; border-radius:10px; border:none;
+  background:var(--btn); color:var(--text); font-family:inherit;
+  font-size:13px; font-weight:700; cursor:pointer; outline:none;
+  transition:transform .1s;
+}
+.lang-select:active{ transform:scale(.95); }
 .theme-btn{
   width:38px; height:38px; border-radius:10px; border:none;
   background:var(--btn); cursor:pointer; font-size:18px;
@@ -125,6 +133,7 @@ textarea{ resize:none; min-height:82px; }
 .progress-bar{
   height:100%; background:var(--primary); border-radius:99px; transition:width .4s ease;
 }
+[dir=rtl] .progress-bar{ margin-left:auto; }
 .category-section{ margin-bottom:14px; }
 .category-header{
   display:flex; align-items:center; gap:6px; margin-bottom:6px; padding:4px 4px 4px 0;
@@ -193,33 +202,42 @@ textarea{ resize:none; min-height:82px; }
 
 <div class="container">
 
-  <!-- TELA DE LISTAS -->
+  <!-- LISTS PAGE -->
   <div id="listsPage">
     <div class="header">
-      <h2>🛒 Compras</h2>
-      <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+      <h2>🛒 MyOwnLists</h2>
+      <div class="header-right">
+        <select class="lang-select" id="langSelect" onchange="setLang(this.value)">
+          <option value="pt">🇧🇷 PT</option>
+          <option value="en">🇺🇸 EN</option>
+          <option value="es">🇪🇸 ES</option>
+          <option value="ja">🇯🇵 JA</option>
+          <option value="he">🇮🇱 HE</option>
+        </select>
+        <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+      </div>
     </div>
     <div id="lists"></div>
-    <div class="section-title">Nova lista</div>
+    <div class="section-title" id="sectionNewList"></div>
     <div class="form-row">
-      <input id="listName" placeholder="Nome da lista" maxlength="30">
-      <input id="listEmoji" placeholder="🛒" maxlength="4">
+      <input id="listName" maxlength="30">
+      <input id="listEmoji" maxlength="4">
     </div>
-    <button class="primary-btn" onclick="createList()">+ Criar lista</button>
+    <button class="primary-btn" id="createListBtn" onclick="createList()"></button>
     <div class="backup-row">
-      <button class="backup-btn" onclick="exportData()">⬆️ Exportar backup</button>
-      <button class="backup-btn" onclick="document.getElementById('importFile').click()">⬇️ Importar backup</button>
+      <button class="backup-btn" id="exportBtn" onclick="exportData()"></button>
+      <button class="backup-btn" id="importBtn" onclick="document.getElementById('importFile').click()"></button>
       <input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
     </div>
   </div>
 
-  <!-- TELA DE ITENS -->
+  <!-- ITEMS PAGE -->
   <div id="itemsPage" class="hidden">
     <div class="top-row">
-      <button class="back-btn" onclick="back()">← Voltar</button>
+      <button class="back-btn" id="backBtn" onclick="back()"></button>
       <div class="top-actions">
-        <button class="clear-btn" onclick="clearDone()">🗑️ Limpar</button>
-        <button class="copy-btn" id="copyBtn">📋 Copiar</button>
+        <button class="clear-btn" id="clearBtn" onclick="clearDone()"></button>
+        <button class="copy-btn" id="copyBtn"></button>
       </div>
     </div>
     <div class="list-title-row">
@@ -229,30 +247,247 @@ textarea{ resize:none; min-height:82px; }
       <div class="progress-bar" id="progressBar"></div>
     </div>
     <div id="items"></div>
-    <div class="section-title">Adicionar itens</div>
-    <input id="newCategory" list="categoryOptions" placeholder="Categoria (opcional) — ex: Frutas, Laticínios" style="margin-bottom:8px">
+    <div class="section-title" id="sectionAddItems"></div>
+    <input id="newCategory" list="categoryOptions" style="margin-bottom:8px">
     <datalist id="categoryOptions"></datalist>
-    <textarea id="newItems" placeholder="Itens — um por linha&#10;Arroz&#10;Feijão&#10;Macarrão"></textarea>
-    <button class="primary-btn" onclick="addItems()">+ Adicionar</button>
+    <textarea id="newItems"></textarea>
+    <button class="primary-btn" id="addItemsBtn" onclick="addItems()"></button>
   </div>
 
 </div>
 
 <script>
+// ── TRANSLATIONS ─────────────────────────────────
+const T = {
+  pt: {
+    newList: "Nova lista",
+    listNamePlaceholder: "Nome da lista",
+    emojiPlaceholder: "🛒",
+    createList: "+ Criar lista",
+    exportBackup: "⬆️ Exportar backup",
+    importBackup: "⬇️ Importar backup",
+    emptyLists: "Nenhuma lista ainda.<br>Crie a primeira abaixo! 👆",
+    itemsBought: (d, t) => `${d}/${t} comprados`,
+    emptyList: "Vazia",
+    back: "← Voltar",
+    clearDone: "🗑️ Limpar",
+    copy: "📋 Copiar",
+    addItems: "Adicionar itens",
+    categoryPlaceholder: "Categoria (opcional) — ex: Frutas, Laticínios",
+    itemsPlaceholder: "Itens — um por linha\nArroz\nFeijão\nMacarrão",
+    addBtn: "+ Adicionar",
+    emptyItems: "Nenhum item ainda.<br>Adicione abaixo! 👇",
+    listCreated: "Lista criada! 🎉",
+    itemsAdded: "Itens adicionados ✅",
+    nothingToClear: "Nenhum item comprado ainda 😊",
+    confirmClear: n => `Remover ${n} item(s) já comprado(s)?`,
+    cleared: n => `${n} item(s) removido(s) 🗑️`,
+    listEmpty: "Lista vazia!",
+    copied: "Lista copiada! 📋",
+    copyError: "Erro ao copiar ❌",
+    backupExported: "Backup exportado ✅",
+    confirmImport: n => `Importar ${n} lista(s)? As listas atuais serão substituídas.`,
+    backupImported: "Backup importado ✅",
+    invalidFile: "Arquivo inválido ❌",
+    renamePrompt: "Novo nome",
+    deleteConfirm: name => `Excluir "${name}"?`,
+    editItemPrompt: "Editar item",
+  },
+  en: {
+    newList: "New list",
+    listNamePlaceholder: "List name",
+    emojiPlaceholder: "🛒",
+    createList: "+ Create list",
+    exportBackup: "⬆️ Export backup",
+    importBackup: "⬇️ Import backup",
+    emptyLists: "No lists yet.<br>Create the first one below! 👆",
+    itemsBought: (d, t) => `${d}/${t} purchased`,
+    emptyList: "Empty",
+    back: "← Back",
+    clearDone: "🗑️ Clear done",
+    copy: "📋 Copy",
+    addItems: "Add items",
+    categoryPlaceholder: "Category (optional) — e.g. Fruits, Dairy",
+    itemsPlaceholder: "Items — one per line\nRice\nBeans\nPasta",
+    addBtn: "+ Add",
+    emptyItems: "No items yet.<br>Add below! 👇",
+    listCreated: "List created! 🎉",
+    itemsAdded: "Items added ✅",
+    nothingToClear: "No purchased items yet 😊",
+    confirmClear: n => `Remove ${n} purchased item(s)?`,
+    cleared: n => `${n} item(s) removed 🗑️`,
+    listEmpty: "Empty list!",
+    copied: "List copied! 📋",
+    copyError: "Copy failed ❌",
+    backupExported: "Backup exported ✅",
+    confirmImport: n => `Import ${n} list(s)? Current lists will be replaced.`,
+    backupImported: "Backup imported ✅",
+    invalidFile: "Invalid file ❌",
+    renamePrompt: "New name",
+    deleteConfirm: name => `Delete "${name}"?`,
+    editItemPrompt: "Edit item",
+  },
+  es: {
+    newList: "Nueva lista",
+    listNamePlaceholder: "Nombre de la lista",
+    emojiPlaceholder: "🛒",
+    createList: "+ Crear lista",
+    exportBackup: "⬆️ Exportar copia",
+    importBackup: "⬇️ Importar copia",
+    emptyLists: "Sin listas todavía.<br>¡Crea la primera abajo! 👆",
+    itemsBought: (d, t) => `${d}/${t} comprados`,
+    emptyList: "Vacía",
+    back: "← Volver",
+    clearDone: "🗑️ Limpiar",
+    copy: "📋 Copiar",
+    addItems: "Agregar ítems",
+    categoryPlaceholder: "Categoría (opcional) — ej: Frutas, Lácteos",
+    itemsPlaceholder: "Ítems — uno por línea\nArroz\nFrijoles\nPasta",
+    addBtn: "+ Agregar",
+    emptyItems: "Sin ítems todavía.<br>¡Agrega abajo! 👇",
+    listCreated: "¡Lista creada! 🎉",
+    itemsAdded: "Ítems agregados ✅",
+    nothingToClear: "Ningún ítem comprado aún 😊",
+    confirmClear: n => `¿Eliminar ${n} ítem(s) comprado(s)?`,
+    cleared: n => `${n} ítem(s) eliminado(s) 🗑️`,
+    listEmpty: "¡Lista vacía!",
+    copied: "¡Lista copiada! 📋",
+    copyError: "Error al copiar ❌",
+    backupExported: "Copia exportada ✅",
+    confirmImport: n => `¿Importar ${n} lista(s)? Las listas actuales serán reemplazadas.`,
+    backupImported: "Copia importada ✅",
+    invalidFile: "Archivo inválido ❌",
+    renamePrompt: "Nuevo nombre",
+    deleteConfirm: name => `¿Eliminar "${name}"?`,
+    editItemPrompt: "Editar ítem",
+  },
+  ja: {
+    newList: "新しいリスト",
+    listNamePlaceholder: "リスト名",
+    emojiPlaceholder: "🛒",
+    createList: "+ リストを作成",
+    exportBackup: "⬆️ バックアップ出力",
+    importBackup: "⬇️ バックアップ読込",
+    emptyLists: "リストがまだありません。<br>下に作成してください！ 👆",
+    itemsBought: (d, t) => `${d}/${t} 購入済み`,
+    emptyList: "空",
+    back: "← 戻る",
+    clearDone: "🗑️ 削除",
+    copy: "📋 コピー",
+    addItems: "アイテムを追加",
+    categoryPlaceholder: "カテゴリ（任意）— 例：野菜、乳製品",
+    itemsPlaceholder: "アイテム — 1行に1つ\nご飯\n牛乳\nパン",
+    addBtn: "+ 追加",
+    emptyItems: "アイテムがまだありません。<br>下に追加してください！ 👇",
+    listCreated: "リストを作成しました！ 🎉",
+    itemsAdded: "アイテムを追加しました ✅",
+    nothingToClear: "まだ購入済みアイテムはありません 😊",
+    confirmClear: n => `購入済みの${n}件を削除しますか？`,
+    cleared: n => `${n}件を削除しました 🗑️`,
+    listEmpty: "リストが空です！",
+    copied: "リストをコピーしました！ 📋",
+    copyError: "コピーに失敗しました ❌",
+    backupExported: "バックアップを出力しました ✅",
+    confirmImport: n => `${n}件のリストをインポートしますか？現在のリストは上書きされます。`,
+    backupImported: "バックアップを読み込みました ✅",
+    invalidFile: "無効なファイルです ❌",
+    renamePrompt: "新しい名前",
+    deleteConfirm: name => `「${name}」を削除しますか？`,
+    editItemPrompt: "アイテムを編集",
+  },
+  he: {
+    newList: "רשימה חדשה",
+    listNamePlaceholder: "שם הרשימה",
+    emojiPlaceholder: "🛒",
+    createList: "+ צור רשימה",
+    exportBackup: "⬆️ ייצא גיבוי",
+    importBackup: "⬇️ ייבא גיבוי",
+    emptyLists: "אין רשימות עדיין.<br>צור את הראשונה למטה! 👆",
+    itemsBought: (d, t) => `${d}/${t} נרכשו`,
+    emptyList: "ריקה",
+    back: "חזרה →",
+    clearDone: "🗑️ נקה",
+    copy: "📋 העתק",
+    addItems: "הוסף פריטים",
+    categoryPlaceholder: "קטגוריה (אופציונלי) — לדוג׳: פירות, מוצרי חלב",
+    itemsPlaceholder: "פריטים — אחד בכל שורה\nאורז\nשמן\nלחם",
+    addBtn: "+ הוסף",
+    emptyItems: "אין פריטים עדיין.<br>הוסף למטה! 👇",
+    listCreated: "הרשימה נוצרה! 🎉",
+    itemsAdded: "פריטים נוספו ✅",
+    nothingToClear: "אין פריטים שנרכשו עדיין 😊",
+    confirmClear: n => `להסיר ${n} פריט(ים) שנרכשו?`,
+    cleared: n => `${n} פריט(ים) הוסרו 🗑️`,
+    listEmpty: "הרשימה ריקה!",
+    copied: "הרשימה הועתקה! 📋",
+    copyError: "שגיאה בהעתקה ❌",
+    backupExported: "הגיבוי יוצא ✅",
+    confirmImport: n => `לייבא ${n} רשימה/ות? הרשימות הנוכחיות יוחלפו.`,
+    backupImported: "הגיבוי יובא ✅",
+    invalidFile: "קובץ לא תקין ❌",
+    renamePrompt: "שם חדש",
+    deleteConfirm: name => `למחוק את "${name}"?`,
+    editItemPrompt: "ערוך פריט",
+  }
+}
+
+// ── STATE ────────────────────────────────────────
 let lists = JSON.parse(localStorage.getItem("lists") || "[]")
 let currentList = null
 let darkMode = localStorage.getItem("darkMode") === "1"
+let currentLang = localStorage.getItem("lang") || "pt"
+let t = T[currentLang]
 
 if(darkMode){ document.body.classList.add("dark") }
+document.getElementById("themeBtn").textContent = darkMode ? "☀️" : "🌙"
 
 function save(){ localStorage.setItem("lists", JSON.stringify(lists)) }
 
 function showToast(msg){
-  const t = document.getElementById("toast")
-  t.textContent = msg
-  t.classList.add("show")
-  setTimeout(() => t.classList.remove("show"), 2200)
+  const el = document.getElementById("toast")
+  el.textContent = msg
+  el.classList.add("show")
+  setTimeout(() => el.classList.remove("show"), 2200)
 }
+
+// ── LANGUAGE ─────────────────────────────────────
+
+function setLang(lang){
+  currentLang = lang
+  t = T[lang]
+  localStorage.setItem("lang", lang)
+  applyLang()
+}
+
+function applyLang(){
+  const isRTL = currentLang === "he"
+  const langMap = { pt:"pt-BR", en:"en", es:"es", ja:"ja", he:"he" }
+  document.documentElement.lang = langMap[currentLang]
+  document.documentElement.dir = isRTL ? "rtl" : "ltr"
+  document.getElementById("langSelect").value = currentLang
+
+  document.getElementById("sectionNewList").textContent = t.newList
+  document.getElementById("listName").placeholder = t.listNamePlaceholder
+  document.getElementById("listEmoji").placeholder = t.emojiPlaceholder
+  document.getElementById("createListBtn").textContent = t.createList
+  document.getElementById("exportBtn").textContent = t.exportBackup
+  document.getElementById("importBtn").textContent = t.importBackup
+  document.getElementById("backBtn").textContent = t.back
+  document.getElementById("clearBtn").textContent = t.clearDone
+  document.getElementById("copyBtn").textContent = t.copy
+  document.getElementById("sectionAddItems").textContent = t.addItems
+  document.getElementById("newCategory").placeholder = t.categoryPlaceholder
+  document.getElementById("newItems").placeholder = t.itemsPlaceholder
+  document.getElementById("addItemsBtn").textContent = t.addBtn
+
+  if(!document.getElementById("itemsPage").classList.contains("hidden")){
+    renderItems()
+  } else {
+    renderLists()
+  }
+}
+
+// ── THEME ─────────────────────────────────────────
 
 function toggleTheme(){
   darkMode = !darkMode
@@ -260,9 +495,8 @@ function toggleTheme(){
   localStorage.setItem("darkMode", darkMode ? "1" : "0")
   document.getElementById("themeBtn").textContent = darkMode ? "☀️" : "🌙"
 }
-document.getElementById("themeBtn").textContent = darkMode ? "☀️" : "🌙"
 
-// ── LISTAS ───────────────────────────────────────
+// ── LISTS ─────────────────────────────────────────
 
 function createList(){
   const name = document.getElementById("listName").value.trim()
@@ -272,20 +506,20 @@ function createList(){
   document.getElementById("listName").value = ""
   document.getElementById("listEmoji").value = ""
   save(); renderLists()
-  showToast("Lista criada! 🎉")
+  showToast(t.listCreated)
 }
 
 function renderLists(){
   const container = document.getElementById("lists")
   container.innerHTML = ""
   if(!lists.length){
-    container.innerHTML = `<div class="empty-state">Nenhuma lista ainda.<br>Crie a primeira abaixo! 👆</div>`
+    container.innerHTML = `<div class="empty-state">${t.emptyLists}</div>`
     return
   }
   lists.forEach((list, i) => {
     const total = list.items.length
     const done = list.items.filter(it => it.status === 1).length
-    const countText = total ? `${done}/${total} comprados` : "Vazia"
+    const countText = total ? t.itemsBought(done, total) : t.emptyList
     const div = document.createElement("div")
     div.className = "list-card"
     div.innerHTML = `
@@ -306,14 +540,14 @@ function renderLists(){
 }
 
 function renameList(i){
-  const name = prompt("Novo nome", lists[i].name)
+  const name = prompt(t.renamePrompt, lists[i].name)
   if(!name) return
   lists[i].name = name
   save(); renderLists()
 }
 
 function deleteList(i){
-  if(!confirm(`Excluir "${lists[i].name}"?`)) return
+  if(!confirm(t.deleteConfirm(lists[i].name))) return
   lists.splice(i, 1)
   save(); renderLists()
 }
@@ -332,7 +566,7 @@ function back(){
   renderLists()
 }
 
-// ── ITENS ────────────────────────────────────────
+// ── ITEMS ─────────────────────────────────────────
 
 function addItems(){
   const txt = document.getElementById("newItems").value.trim()
@@ -341,13 +575,13 @@ function addItems(){
   const list = lists[currentList]
   if(!list.categoryOrder) list.categoryOrder = []
   if(!list.collapsedCats) list.collapsedCats = []
-  txt.split("\n").forEach(t => {
-    if(t.trim()) list.items.push({ name:t.trim(), status:0, category:category||"" })
+  txt.split("\n").forEach(t2 => {
+    if(t2.trim()) list.items.push({ name:t2.trim(), status:0, category:category||"" })
   })
   if(!list.categoryOrder.includes(category||"")) list.categoryOrder.push(category||"")
   document.getElementById("newItems").value = ""
   save(); renderItems()
-  showToast("Itens adicionados ✅")
+  showToast(t.itemsAdded)
 }
 
 function toggleStatus(i){
@@ -356,7 +590,7 @@ function toggleStatus(i){
 }
 
 function editItem(i){
-  const name = prompt("Editar item", lists[currentList].items[i].name)
+  const name = prompt(t.editItemPrompt, lists[currentList].items[i].name)
   if(!name) return
   lists[currentList].items[i].name = name
   save(); renderItems()
@@ -367,19 +601,19 @@ function deleteItem(i){
   save(); renderItems()
 }
 
-// ── LIMPAR COMPRADOS ─────────────────────────────
+// ── CLEAR DONE ────────────────────────────────────
 
 function clearDone(){
   const list = lists[currentList]
   const doneCount = list.items.filter(it => it.status === 1).length
-  if(!doneCount){ showToast("Nenhum item comprado ainda 😊"); return }
-  if(!confirm(`Remover ${doneCount} item(s) já comprado(s)?`)) return
+  if(!doneCount){ showToast(t.nothingToClear); return }
+  if(!confirm(t.confirmClear(doneCount))) return
   list.items = list.items.filter(it => it.status !== 1)
   save(); renderItems()
-  showToast(`${doneCount} item(s) removido(s) 🗑️`)
+  showToast(t.cleared(doneCount))
 }
 
-// ── USAR CATEGORIA ───────────────────────────────
+// ── CATEGORY ──────────────────────────────────────
 
 function useCategory(cat){
   const input = document.getElementById("newCategory")
@@ -387,8 +621,6 @@ function useCategory(cat){
   input.scrollIntoView({ behavior:"smooth", block:"center" })
   document.getElementById("newItems").focus()
 }
-
-// ── COLAPSAR CATEGORIA ───────────────────────────
 
 function toggleCollapse(cat){
   const list = lists[currentList]
@@ -399,7 +631,7 @@ function toggleCollapse(cat){
   save(); renderItems()
 }
 
-// ── RENDERIZAR COM CATEGORIAS ────────────────────
+// ── RENDER ITEMS ──────────────────────────────────
 
 function renderItems(){
   const container = document.getElementById("items")
@@ -414,11 +646,10 @@ function renderItems(){
   document.getElementById("progressBar").style.width = pct + "%"
 
   if(!total){
-    container.innerHTML = `<div class="empty-state">Nenhum item ainda.<br>Adicione abaixo! 👇</div>`
+    container.innerHTML = `<div class="empty-state">${t.emptyItems}</div>`
     return
   }
 
-  // Atualizar autocomplete
   const dl = document.getElementById("categoryOptions")
   if(dl){
     dl.innerHTML = ""
@@ -426,7 +657,6 @@ function renderItems(){
     cats.forEach(c => { const o = document.createElement("option"); o.value = c; dl.appendChild(o) })
   }
 
-  // Agrupar itens por categoria
   const groups = {}
   list.items.forEach((item, i) => {
     const cat = item.category || ""
@@ -434,13 +664,11 @@ function renderItems(){
     groups[cat].push({ item, i })
   })
 
-  // Ordenar categorias: usar categoryOrder, depois adicionar novas
   const existingCats = Object.keys(groups)
   const orderedCats = list.categoryOrder.filter(c => existingCats.includes(c))
   existingCats.forEach(c => { if(!orderedCats.includes(c)) orderedCats.push(c) })
   list.categoryOrder = orderedCats
 
-  // Container principal das categorias (sortable)
   const catContainer = document.createElement("div")
   catContainer.id = "catContainer"
   container.appendChild(catContainer)
@@ -458,7 +686,7 @@ function renderItems(){
       header.innerHTML = `
         <div class="cat-drag">⠿</div>
         <div class="category-label">📂 ${cat}</div>
-        <button class="icon-btn use-cat-btn" title="Usar esta categoria" onclick="useCategory('${catEsc}')">+</button>
+        <button class="icon-btn use-cat-btn" title="+" onclick="useCategory('${catEsc}')">+</button>
         <button class="collapse-btn" onclick="toggleCollapse('${catEsc}')">
           ${isCollapsed ? '▶' : '▼'}
         </button>
@@ -501,7 +729,6 @@ function renderItems(){
     })
   })
 
-  // Drag para reordenar categorias (apenas as nomeadas têm handle)
   new Sortable(catContainer, {
     handle:".cat-drag", animation:150,
     onEnd:() => {
@@ -515,11 +742,11 @@ function renderItems(){
   })
 }
 
-// ── COPIAR LISTA ─────────────────────────────────
+// ── COPY LIST ─────────────────────────────────────
 
 function copyList(){
   const list = lists[currentList]
-  if(!list || !list.items.length){ showToast("Lista vazia!"); return }
+  if(!list || !list.items.length){ showToast(t.listEmpty); return }
   const statusLabel = ["⬜","✅","🤔"]
   const groups = {}
   list.items.forEach(item => {
@@ -538,7 +765,7 @@ function copyList(){
   })
   const text = lines.join("\n")
   if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(text).then(()=>showToast("Lista copiada! 📋")).catch(()=>fallbackCopy(text))
+    navigator.clipboard.writeText(text).then(()=>showToast(t.copied)).catch(()=>fallbackCopy(text))
   } else { fallbackCopy(text) }
 }
 
@@ -546,21 +773,21 @@ function fallbackCopy(text){
   const ta = document.createElement("textarea")
   ta.value = text; ta.style.position="fixed"; ta.style.opacity="0"
   document.body.appendChild(ta); ta.focus(); ta.select()
-  try { document.execCommand("copy"); showToast("Lista copiada! 📋") }
-  catch(e){ showToast("Erro ao copiar ❌") }
+  try { document.execCommand("copy"); showToast(t.copied) }
+  catch(e){ showToast(t.copyError) }
   document.body.removeChild(ta)
 }
 
 document.getElementById("copyBtn").addEventListener("click", copyList)
 
-// ── BACKUP ───────────────────────────────────────
+// ── BACKUP ────────────────────────────────────────
 
 function exportData(){
   const data = JSON.stringify(lists, null, 2)
   const blob = new Blob([data], { type:"application/json" })
   const url = URL.createObjectURL(blob)
   if(navigator.share){
-    navigator.share({ files:[new File([blob], "compras-backup.json", { type:"application/json" })], title:"Backup Compras" })
+    navigator.share({ files:[new File([blob], "mylists-backup.json", { type:"application/json" })], title:"MyOwnLists Backup" })
       .catch(() => downloadFile(url))
   } else {
     downloadFile(url)
@@ -569,9 +796,9 @@ function exportData(){
 
 function downloadFile(url){
   const a = document.createElement("a")
-  a.href = url; a.download = "compras-backup.json"
+  a.href = url; a.download = "mylists-backup.json"
   a.click(); URL.revokeObjectURL(url)
-  showToast("Backup exportado ✅")
+  showToast(t.backupExported)
 }
 
 function importData(e){
@@ -582,25 +809,25 @@ function importData(e){
     try {
       const data = JSON.parse(ev.target.result)
       if(!Array.isArray(data)) throw new Error()
-      if(!confirm(`Importar ${data.length} lista(s)? As listas atuais serão substituídas.`)) return
+      if(!confirm(t.confirmImport(data.length))) return
       lists = data
       save(); renderLists()
-      showToast("Backup importado ✅")
+      showToast(t.backupImported)
     } catch {
-      showToast("Arquivo inválido ❌")
+      showToast(t.invalidFile)
     }
   }
   reader.readAsText(file)
   e.target.value = ""
 }
 
-// ── INIT ─────────────────────────────────────────
-renderLists()
+// ── INIT ──────────────────────────────────────────
+applyLang()
 
 if("serviceWorker" in navigator){
   navigator.serviceWorker.register("service-worker.js")
-    .then(() => console.log("✅ SW registrado"))
-    .catch(e => console.warn("SW erro:", e))
+    .then(() => console.log("✅ SW registered"))
+    .catch(e => console.warn("SW error:", e))
 }
 </script>
 </body>
