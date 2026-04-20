@@ -64,6 +64,7 @@ body{
   transition:transform .1s;
 }
 .theme-btn:active{ transform:scale(.9); }
+.help-btn{ font-weight:800; font-size:20px; line-height:1; }
 .list-card{
   display:flex; justify-content:space-between; align-items:center;
   background:var(--card); padding:14px; border-radius:var(--radius);
@@ -194,11 +195,78 @@ textarea{ resize:none; min-height:82px; }
   cursor:pointer; transition:transform .1s;
 }
 .backup-btn:active{ transform:scale(.97); }
+
+/* ── HELP MODAL ── */
+.help-modal{
+  position:fixed; top:0; left:0; right:0; bottom:0;
+  background:rgba(0,0,0,.55); z-index:1000;
+  display:flex; align-items:center; justify-content:center; padding:20px;
+}
+.help-modal.hidden{ display:none; }
+.help-box{
+  background:var(--card); border-radius:var(--radius);
+  padding:24px; max-width:480px; width:100%;
+  max-height:82vh; overflow-y:auto;
+  box-shadow:0 8px 40px rgba(0,0,0,.3);
+}
+.help-box-header{
+  display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;
+}
+.help-box-title{ font-size:18px; font-weight:800; color:var(--primary); }
+.help-x-btn{
+  width:32px; height:32px; border-radius:8px; border:none;
+  background:var(--btn); color:var(--text); cursor:pointer;
+  font-size:16px; font-weight:700; line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  transition:transform .1s;
+}
+.help-x-btn:active{ transform:scale(.88); }
+.help-content h3{
+  color:var(--primary); font-size:14px; font-weight:800;
+  text-transform:uppercase; letter-spacing:.06em; margin:18px 0 8px;
+}
+.help-content p{ margin:0 0 8px; line-height:1.7; font-size:14px; }
+.help-content ul{ padding-left:20px; margin:0 0 8px; line-height:1.9; font-size:14px; }
+.help-content .warn-box{
+  background:#fff8e1; border-left:4px solid var(--warning);
+  border-radius:8px; padding:10px 14px; margin-top:4px; font-size:13px; line-height:1.6;
+}
+.dark .help-content .warn-box{ background:#2a2200; }
+.help-close-btn{
+  width:100%; margin-top:20px; padding:12px; border:none; border-radius:10px;
+  background:var(--primary); color:white; font-family:inherit;
+  font-size:15px; font-weight:700; cursor:pointer;
+  transition:background .2s,transform .1s;
+}
+.help-close-btn:hover{ background:#388e3c; }
+.help-close-btn:active{ transform:scale(.98); }
+
+/* ── FOOTER ── */
+.site-footer{
+  text-align:center; padding:28px 0 8px; color:var(--muted); font-size:13px;
+}
+.site-footer a{
+  color:var(--muted); text-decoration:none; font-weight:700;
+  transition:color .2s;
+}
+.site-footer a:hover{ color:var(--primary); }
 </style>
 </head>
 <body>
 
 <div class="toast" id="toast"></div>
+
+<!-- HELP MODAL -->
+<div class="help-modal hidden" id="helpModal" onclick="closeHelpOnBg(event)">
+  <div class="help-box">
+    <div class="help-box-header">
+      <span class="help-box-title" id="helpTitle"></span>
+      <button class="help-x-btn" onclick="closeHelp()">✕</button>
+    </div>
+    <div class="help-content" id="helpContent"></div>
+    <button class="help-close-btn" id="helpCloseBtn" onclick="closeHelp()"></button>
+  </div>
+</div>
 
 <div class="container">
 
@@ -207,12 +275,14 @@ textarea{ resize:none; min-height:82px; }
     <div class="header">
       <h2>🛒 MyOwnLists</h2>
       <div class="header-right">
+        <button class="theme-btn help-btn" onclick="openHelp()" id="helpBtn">?</button>
         <select class="lang-select" id="langSelect" onchange="setLang(this.value)">
           <option value="pt">🇧🇷 PT</option>
           <option value="en">🇺🇸 EN</option>
           <option value="es">🇪🇸 ES</option>
           <option value="ja">🇯🇵 JA</option>
           <option value="he">🇮🇱 HE</option>
+          <option value="ko">🇰🇷 KO</option>
         </select>
         <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
       </div>
@@ -254,6 +324,10 @@ textarea{ resize:none; min-height:82px; }
     <button class="primary-btn" id="addItemsBtn" onclick="addItems()"></button>
   </div>
 
+  <footer class="site-footer">
+    <a href="https://github.com/renatodjunior" target="_blank" rel="noopener">github.com/renatodjunior</a>
+  </footer>
+
 </div>
 
 <script>
@@ -292,6 +366,8 @@ const T = {
     renamePrompt: "Novo nome",
     deleteConfirm: name => `Excluir "${name}"?`,
     editItemPrompt: "Editar item",
+    helpTitle: "Como usar",
+    helpClose: "Fechar",
   },
   en: {
     newList: "New list",
@@ -326,6 +402,8 @@ const T = {
     renamePrompt: "New name",
     deleteConfirm: name => `Delete "${name}"?`,
     editItemPrompt: "Edit item",
+    helpTitle: "How to use",
+    helpClose: "Close",
   },
   es: {
     newList: "Nueva lista",
@@ -360,6 +438,8 @@ const T = {
     renamePrompt: "Nuevo nombre",
     deleteConfirm: name => `¿Eliminar "${name}"?`,
     editItemPrompt: "Editar ítem",
+    helpTitle: "Cómo usar",
+    helpClose: "Cerrar",
   },
   ja: {
     newList: "新しいリスト",
@@ -394,6 +474,8 @@ const T = {
     renamePrompt: "新しい名前",
     deleteConfirm: name => `「${name}」を削除しますか？`,
     editItemPrompt: "アイテムを編集",
+    helpTitle: "使い方",
+    helpClose: "閉じる",
   },
   he: {
     newList: "רשימה חדשה",
@@ -428,7 +510,157 @@ const T = {
     renamePrompt: "שם חדש",
     deleteConfirm: name => `למחוק את "${name}"?`,
     editItemPrompt: "ערוך פריט",
+    helpTitle: "איך להשתמש",
+    helpClose: "סגור",
+  },
+  ko: {
+    newList: "새 목록",
+    listNamePlaceholder: "목록 이름",
+    emojiPlaceholder: "🛒",
+    createList: "+ 목록 만들기",
+    exportBackup: "⬆️ 백업 내보내기",
+    importBackup: "⬇️ 백업 가져오기",
+    emptyLists: "아직 목록이 없습니다.<br>아래에서 첫 번째를 만들어보세요! 👆",
+    itemsBought: (d, t) => `${d}/${t} 구매 완료`,
+    emptyList: "비어 있음",
+    back: "← 뒤로",
+    clearDone: "🗑️ 완료 삭제",
+    copy: "📋 복사",
+    addItems: "항목 추가",
+    categoryPlaceholder: "카테고리 (선택) — 예: 과일, 유제품",
+    itemsPlaceholder: "항목 — 한 줄에 하나씩\n쌀\n우유\n빵",
+    addBtn: "+ 추가",
+    emptyItems: "아직 항목이 없습니다.<br>아래에 추가하세요! 👇",
+    listCreated: "목록이 만들어졌습니다! 🎉",
+    itemsAdded: "항목이 추가되었습니다 ✅",
+    nothingToClear: "아직 구매한 항목이 없습니다 😊",
+    confirmClear: n => `구매한 항목 ${n}개를 삭제할까요?`,
+    cleared: n => `${n}개 항목이 삭제되었습니다 🗑️`,
+    listEmpty: "목록이 비어 있습니다!",
+    copied: "목록이 복사되었습니다! 📋",
+    copyError: "복사 실패 ❌",
+    backupExported: "백업이 내보내졌습니다 ✅",
+    confirmImport: n => `${n}개의 목록을 가져올까요? 현재 목록이 교체됩니다.`,
+    backupImported: "백업을 가져왔습니다 ✅",
+    invalidFile: "잘못된 파일입니다 ❌",
+    renamePrompt: "새 이름",
+    deleteConfirm: name => `"${name}"을(를) 삭제할까요?`,
+    editItemPrompt: "항목 편집",
+    helpTitle: "사용 방법",
+    helpClose: "닫기",
   }
+}
+
+// ── HELP CONTENT ─────────────────────────────────
+const HELP = {
+  pt: `
+    <p>MyOwnLists é um app de listas pessoais que funciona direto no seu navegador — sem cadastro, sem servidor.</p>
+    <h3>✨ Funcionalidades</h3>
+    <ul>
+      <li>Crie múltiplas listas com nome e emoji personalizados</li>
+      <li>Adicione itens agrupados por <strong>categorias</strong></li>
+      <li>Marque itens como <strong>comprado ✅</strong>, <strong>talvez 🤔</strong> ou pendente</li>
+      <li>Reordene itens e categorias <strong>arrastando</strong></li>
+      <li>Barra de progresso por lista</li>
+      <li>Copie a lista como texto formatado</li>
+      <li>Modo escuro 🌙 e suporte a 6 idiomas</li>
+      <li>Instale como app no celular (PWA)</li>
+    </ul>
+    <h3>💾 Armazenamento local</h3>
+    <p>Todos os dados ficam salvos no <strong>armazenamento do navegador</strong> (localStorage) do seu dispositivo. Nenhuma conta ou servidor necessário.</p>
+    <h3>⚠️ Faça backup!</h3>
+    <div class="warn-box">Antes de <strong>limpar o cache, os dados do site</strong> ou trocar de dispositivo/navegador, exporte seus dados. Use os botões de backup na tela inicial.</div>
+  `,
+  en: `
+    <p>MyOwnLists is a personal list app that runs directly in your browser — no account, no server.</p>
+    <h3>✨ Features</h3>
+    <ul>
+      <li>Create multiple lists with custom name and emoji</li>
+      <li>Add items grouped by <strong>categories</strong></li>
+      <li>Mark items as <strong>purchased ✅</strong>, <strong>maybe 🤔</strong>, or pending</li>
+      <li>Drag to <strong>reorder</strong> items and categories</li>
+      <li>Progress bar per list</li>
+      <li>Copy list as formatted text</li>
+      <li>Dark mode 🌙 and 6 language support</li>
+      <li>Install as a mobile app (PWA)</li>
+    </ul>
+    <h3>💾 Local storage</h3>
+    <p>All data is saved in your browser's <strong>local storage</strong> on your device. No account or server required.</p>
+    <h3>⚠️ Back up your data!</h3>
+    <div class="warn-box">Before <strong>clearing browser cache or site data</strong>, or switching devices/browsers, export your data using the backup buttons on the home screen.</div>
+  `,
+  es: `
+    <p>MyOwnLists es una app de listas personales que funciona directamente en tu navegador — sin registro, sin servidor.</p>
+    <h3>✨ Funcionalidades</h3>
+    <ul>
+      <li>Crea múltiples listas con nombre y emoji personalizados</li>
+      <li>Agrega ítems agrupados por <strong>categorías</strong></li>
+      <li>Marca ítems como <strong>comprado ✅</strong>, <strong>quizás 🤔</strong> o pendiente</li>
+      <li>Arrastra para <strong>reordenar</strong> ítems y categorías</li>
+      <li>Barra de progreso por lista</li>
+      <li>Copia la lista como texto formateado</li>
+      <li>Modo oscuro 🌙 y soporte en 6 idiomas</li>
+      <li>Instala como app en el móvil (PWA)</li>
+    </ul>
+    <h3>💾 Almacenamiento local</h3>
+    <p>Todos los datos se guardan en el <strong>almacenamiento local del navegador</strong> de tu dispositivo. No necesitas cuenta ni servidor.</p>
+    <h3>⚠️ ¡Haz copias de seguridad!</h3>
+    <div class="warn-box">Antes de <strong>limpiar el caché o los datos del sitio</strong>, o de cambiar de dispositivo/navegador, exporta tus datos con los botones de copia de seguridad en la pantalla de inicio.</div>
+  `,
+  ja: `
+    <p>MyOwnListsは、アカウント不要でブラウザ上で動作する個人用リストアプリです。</p>
+    <h3>✨ 機能</h3>
+    <ul>
+      <li>名前と絵文字でカスタマイズしたリストを複数作成</li>
+      <li><strong>カテゴリ</strong>別にアイテムを追加</li>
+      <li>アイテムを<strong>購入済み ✅</strong>、<strong>未定 🤔</strong>、未購入でマーク</li>
+      <li><strong>ドラッグ</strong>でアイテムとカテゴリを並べ替え</li>
+      <li>リストごとの進捗バー</li>
+      <li>リストをテキストとしてコピー</li>
+      <li>ダークモード 🌙 と6言語対応</li>
+      <li>スマートフォンにアプリとしてインストール可能 (PWA)</li>
+    </ul>
+    <h3>💾 ローカルストレージ</h3>
+    <p>すべてのデータはお使いのデバイスの<strong>ブラウザのローカルストレージ</strong>に保存されます。アカウントやサーバーは不要です。</p>
+    <h3>⚠️ バックアップを忘れずに！</h3>
+    <div class="warn-box"><strong>キャッシュやサイトデータを消去する</strong>前、またはデバイス・ブラウザを変更する前に、ホーム画面のバックアップボタンでデータを書き出してください。</div>
+  `,
+  he: `
+    <p>MyOwnLists הוא אפליקציית רשימות אישיות שפועלת ישירות בדפדפן — ללא הרשמה, ללא שרת.</p>
+    <h3>✨ תכונות</h3>
+    <ul>
+      <li>צור רשימות מרובות עם שם ואמוג׳י מותאמים אישית</li>
+      <li>הוסף פריטים מקובצים לפי <strong>קטגוריות</strong></li>
+      <li>סמן פריטים כ<strong>נרכש ✅</strong>, <strong>אולי 🤔</strong> או ממתין</li>
+      <li>גרור כדי <strong>לסדר מחדש</strong> פריטים וקטגוריות</li>
+      <li>סרגל התקדמות לכל רשימה</li>
+      <li>העתק רשימה כטקסט מעוצב</li>
+      <li>מצב לילה 🌙 ותמיכה ב-6 שפות</li>
+      <li>התקן כאפליקציה בנייד (PWA)</li>
+    </ul>
+    <h3>💾 אחסון מקומי</h3>
+    <p>כל הנתונים נשמרים ב<strong>אחסון המקומי של הדפדפן</strong> במכשיר שלך. אין צורך בחשבון או שרת.</p>
+    <h3>⚠️ גבה את הנתונים!</h3>
+    <div class="warn-box">לפני <strong>ניקוי המטמון או נתוני האתר</strong>, או מעבר למכשיר/דפדפן אחר, ייצא את הנתונים שלך באמצעות כפתורי הגיבוי במסך הבית.</div>
+  `,
+  ko: `
+    <p>MyOwnLists는 계정도 서버도 필요 없이 브라우저에서 바로 사용하는 개인 목록 앱입니다.</p>
+    <h3>✨ 기능</h3>
+    <ul>
+      <li>이름과 이모지로 여러 목록 만들기</li>
+      <li><strong>카테고리</strong>별로 항목 추가</li>
+      <li>항목을 <strong>구매 완료 ✅</strong>, <strong>고민 중 🤔</strong>, 대기로 표시</li>
+      <li>드래그로 항목 및 카테고리 <strong>순서 변경</strong></li>
+      <li>목록별 진행률 표시줄</li>
+      <li>목록을 서식 있는 텍스트로 복사</li>
+      <li>다크 모드 🌙 및 6개 언어 지원</li>
+      <li>스마트폰에 앱으로 설치 가능 (PWA)</li>
+    </ul>
+    <h3>💾 로컬 저장소</h3>
+    <p>모든 데이터는 기기의 <strong>브라우저 로컬 저장소</strong>에 저장됩니다. 계정이나 서버가 필요하지 않습니다.</p>
+    <h3>⚠️ 백업을 잊지 마세요!</h3>
+    <div class="warn-box"><strong>브라우저 캐시나 사이트 데이터를 지우기</strong> 전, 또는 기기·브라우저를 바꾸기 전에 홈 화면의 백업 버튼으로 데이터를 내보내세요.</div>
+  `
 }
 
 // ── STATE ────────────────────────────────────────
@@ -461,7 +693,7 @@ function setLang(lang){
 
 function applyLang(){
   const isRTL = currentLang === "he"
-  const langMap = { pt:"pt-BR", en:"en", es:"es", ja:"ja", he:"he" }
+  const langMap = { pt:"pt-BR", en:"en", es:"es", ja:"ja", he:"he", ko:"ko" }
   document.documentElement.lang = langMap[currentLang]
   document.documentElement.dir = isRTL ? "rtl" : "ltr"
   document.getElementById("langSelect").value = currentLang
@@ -494,6 +726,23 @@ function toggleTheme(){
   document.body.classList.toggle("dark", darkMode)
   localStorage.setItem("darkMode", darkMode ? "1" : "0")
   document.getElementById("themeBtn").textContent = darkMode ? "☀️" : "🌙"
+}
+
+// ── HELP MODAL ────────────────────────────────────
+
+function openHelp(){
+  document.getElementById("helpTitle").textContent = t.helpTitle
+  document.getElementById("helpContent").innerHTML = HELP[currentLang] || HELP.en
+  document.getElementById("helpCloseBtn").textContent = t.helpClose
+  document.getElementById("helpModal").classList.remove("hidden")
+}
+
+function closeHelp(){
+  document.getElementById("helpModal").classList.add("hidden")
+}
+
+function closeHelpOnBg(e){
+  if(e.target === document.getElementById("helpModal")) closeHelp()
 }
 
 // ── LISTS ─────────────────────────────────────────
